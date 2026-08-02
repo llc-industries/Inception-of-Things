@@ -1,2 +1,4 @@
-sujet.pdf
-.vagrant/
+*
+!p1/Vagrantfile
+!p1/scripts
+

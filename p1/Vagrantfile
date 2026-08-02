@@ -1,48 +1,45 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-Vagrant.configure("2") do |config|
+# ────── CONFIGURATION ─────────
+VM_CPUS       = 2
+VM_MEMORY     = 2048
+BOX_IMAGE     = "generic/rocky9"
+BOX_VERSION   = "4.3.12"
+SERVER_IP     = "192.168.56.110"
+WORKER_IP     = "192.168.56.111"
+SYNC_DIR_HOST = "./data"
+# ──────────────────────────────
 
-  config.vm.box = "rockylinux/8"
-  config.vm.box_version = "10.0.0"
-  config.ssh.shell = "zsh -l"
+Vagrant.configure("2") do |config|
+  config.vm.box = BOX_IMAGE
+  config.vm.box_version = BOX_VERSION
 
   # ────────────────── VM Server ──────────────────
   config.vm.define "server" do |server|
     server.vm.hostname = "lle-coutS"
-    server.vm.network "private_network", ip: "192.168.56.110"
+    server.vm.network "private_network", ip: SERVER_IP
+    server.vm.synced_folder SYNC_DIR_HOST, "/vagrant", type: "nfs", nfs_udp: false
 
-    # Share an additional folder to the guest VM. The first argument is
-    # the path on the host to the actual folder. The second argument is
-    # the path on the guest to mount the folder.
-    # worker.vm.synced_folder "../data", "/vagrant_data"
-
-    server.vm.provider :virtualbox do |v|
-      v.name = "Server"
-      v.memory = 1024
-      v.cpus = 1
+    server.vm.provider :libvirt do |libvirt|
+      libvirt.memory = VM_MEMORY
+      libvirt.cpus = VM_CPUS
     end
 
-  server.vm.provision "shell", path: "scripts/vm_server_init.sh"
+    server.vm.provision "shell", path: "scripts/server_init.sh"
   end
 
   # ────────────────── VM Worker ──────────────────
   config.vm.define "worker" do |worker|
     worker.vm.hostname = "lle-coutSW"
-    worker.vm.network "private_network", ip: "192.168.56.111"
+    worker.vm.network "private_network", ip: WORKER_IP
+    worker.vm.synced_folder SYNC_DIR_HOST, "/vagrant", type: "nfs", nfs_udp: false
 
-    # Share an additional folder to the guest VM. The first argument is
-    # the path on the host to the actual folder. The second argument is
-    # the path on the guest to mount the folder.
-    # worker.vm.synced_folder "../data", "/vagrant_data"
-
-    worker.vm.provider :virtualbox do |v|
-      v.name = "Worker"
-      v.memory = 1024
-      v.cpus = 1
+    worker.vm.provider :libvirt do |libvirt|
+      libvirt.memory = VM_MEMORY
+      libvirt.cpus = VM_CPUS
     end
 
-  worker.vm.provision "shell", path: "scripts/vm_server_worker_init.sh"
+    worker.vm.provision "shell", path: "scripts/worker_init.sh"
   end
-
 end
