@@ -1,4 +1,8 @@
 *
-!p1/Vagrantfile
-!p1/scripts
-
+!*/
+!Makefile
+!Vagrantfile
+!*.sh
+!*.yaml
+!*.yml
+.vagrant/
