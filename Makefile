@@ -7,10 +7,10 @@ down:
 	vagrant halt
 
 repo_copy:
-	vagrant provision --provision-with=copy_repo
+	vagrant provision --provision-with=copy-repo
 
 gui:
-	virt-viewer -c qemu:///system IoT --attach &
+	virt-viewer -c qemu:///system -f IoT --attach &
 
 clean:
 	vagrant destroy
@@ -18,6 +18,9 @@ clean:
 fclean:
 	vagrant destroy -f
 
+fix:
+	sudo iptables -P FORWARD ACCEPT
+
 re: fclean up
 
-.PHONY: up down repo_copy gui clean fclean
+.PHONY: default up down repo_copy gui clean fclean re

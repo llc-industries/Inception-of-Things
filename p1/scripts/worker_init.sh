@@ -1,29 +1,26 @@
 #!/usr/bin/env sh
+set -eu
 
-dnf upgrade -y
-dnf install -y zsh curl
-dnf autoremove -y
+apt-get update -y
+apt-get install -y curl zsh
 
-# Disable firewalld so VMs can communicate
-systemctl disable --now firewalld
+echo "PasswordAuthentication no" > /etc/ssh/sshd_config.d/99-no-password.conf
+systemctl reload ssh
 
-# Disable SSH Password
-sed -i 's/^PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl restart sshd
-
-while [ ! -f /vagrant/node-token ]; do
-  sleep 2
+# Wait for the K3s API server
+tries=0
+until curl -sk -o /dev/null --max-time 2 https://192.168.56.110:6443/; do
+	tries=$((tries + 1))
+	[ "$tries" -lt 60 ] || exit 1
+	sleep 2
 done
 
 # Install K3s
-TOKEN=$(cat /vagrant/node-token)
 export K3S_URL="https://192.168.56.110:6443"
-export K3S_TOKEN="${TOKEN}"
 export INSTALL_K3S_EXEC="agent --node-ip=192.168.56.111"
-
+export K3S_TOKEN="token"
 curl -sfL https://get.k3s.io | sh -
 
-# Configure ZSH
 usermod -s /bin/zsh vagrant
 touch /home/vagrant/.zshrc
 chown vagrant:vagrant /home/vagrant/.zshrc
