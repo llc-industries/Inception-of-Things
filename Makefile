@@ -1,6 +1,6 @@
 default: up
 
-up:
+up: fix
 	vagrant up --provider=libvirt
 
 down:
