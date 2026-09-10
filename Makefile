@@ -6,9 +6,6 @@ up: fix
 down:
 	vagrant halt
 
-repo_copy:
-	vagrant provision --provision-with=copy-repo
-
 gui:
 	virt-viewer -c qemu:///system -f IoT --attach &
 

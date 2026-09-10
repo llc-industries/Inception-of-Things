@@ -13,11 +13,6 @@ Vagrant.configure("2") do |config|
   config.vm.define VM_NAME
   config.vm.hostname = VM_NAME
 
-  config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.provision "copy-repo", type: "file",
-    source: ".",
-    destination: "/home/vagrant/Inception-of-Things"
-
   config.vm.provider "libvirt" do |lv|
     lv.default_prefix = ""
     lv.memory = VM_MEMORY
@@ -29,5 +24,8 @@ Vagrant.configure("2") do |config|
                target_type: "virtio"
   end
 
-  config.vm.provision "shell", path: "scripts/master_init.sh"
+  config.vm.provision "shell", inline: "ln -s /vagrant /home/vagrant/Inception-of-Things"
+  config.vm.provision "ansible" do |ansible|
+      ansible.playbook = "confs/playbook.yaml"
+  end
 end

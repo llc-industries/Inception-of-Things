@@ -1,0 +1,101 @@
+---
+- name: Master provision
+  hosts: all
+  become: true
+
+  tasks:
+    # ──────────── VSCode, Vagrant ────────────
+
+    - name: Download Hashicorp GPG
+      ansible.builtin.get_url:
+        url: https://apt.releases.hashicorp.com/gpg
+        dest: /usr/share/keyrings/hashicorp.asc
+        mode: "0644"
+
+    - name: Download Microsoft GPG
+      ansible.builtin.get_url:
+        url: https://packages.microsoft.com/keys/microsoft.asc
+        dest: /usr/share/keyrings/microsoft.asc
+        mode: "0644"
+
+    - name: Add Hashicorp repo
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/hashicorp.asc] https://apt.releases.hashicorp.com {{ ansible_facts['distribution_release'] }} main"
+        filename: hashicorp
+
+    - name: Add VS Code repo
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/microsoft.asc] https://packages.microsoft.com/repos/code stable main"
+        filename: vscode
+
+    # ──────────── APT ────────────
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+
+    - name: Install packages
+      ansible.builtin.apt:
+        name:
+          - zsh
+          - qemu-system-x86
+          - qemu-utils
+          - libvirt-daemon-system
+          - libvirt-clients
+          - virt-manager
+          - git
+          - curl
+          - rsync
+          - gcc
+          - make
+          - pkg-config
+          - libvirt-dev
+          - ruby-dev
+          - libxml2-dev
+          - libxslt1-dev
+          - zlib1g-dev
+          - vagrant
+          - code
+          - ansible-core
+        state: present
+
+    # ──────────── k9s ────────────
+
+    - name: Dl k9s
+      ansible.builtin.get_url:
+        url: "https://github.com/derailed/k9s/releases/download/v0.51.0/k9s_linux_amd64.deb"
+        dest: /tmp/k9s.deb
+        mode: "0644"
+
+    - name: Install k9s
+      ansible.builtin.apt:
+        deb: /tmp/k9s.deb
+
+    - name: Remove k9s deb
+      ansible.builtin.file:
+        path: /tmp/k9s.deb
+        state: absent
+
+    # ──────────── Vagrant, Libvirt & ZSH ────────────
+
+    - name: Configure vagrant user
+      ansible.builtin.user:
+        name: "vagrant"
+        shell: /bin/zsh
+        groups: [libvirt, kvm, sudo]
+        append: true
+
+    - name: Install vagrant-libvirt plugin
+      ansible.builtin.command:
+        cmd: vagrant plugin install vagrant-libvirt
+        creates: /home/vagrant/.vagrant.d/plugins.json
+      become_user: "vagrant"
+
+    - name: Create .zshrc
+      ansible.builtin.copy:
+        dest: "/home/vagrant/.zshrc"
+        content: "export PS1='%n@%m %~$ '\n"
+        owner: "vagrant"
+        group: "vagrant"
+        mode: "0644"

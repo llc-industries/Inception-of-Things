@@ -5,4 +5,5 @@
 !*.sh
 !*.yaml
 !*.yml
+!*.cfg
 .vagrant/
