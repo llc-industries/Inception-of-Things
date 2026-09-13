@@ -1,0 +1,76 @@
+---
+- name: "Provision P2"
+  hosts: all
+  become: true
+
+  vars:
+    server_ip: "192.168.56.110"
+
+  tasks:
+    - name: Update APT
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install packets
+      ansible.builtin.apt:
+        name:
+          - curl
+          - zsh
+
+    - name: Disable SSH Auth
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/99-no-password.conf
+        content: "PasswordAuthentication no\n"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload SSH
+
+    - name: Make ZSH default
+      ansible.builtin.user:
+        name: vagrant
+        shell: /bin/zsh
+
+    - name: Configure ZSH
+      ansible.builtin.copy:
+        dest: /home/vagrant/.zshrc
+        content: |
+          export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+          alias k=kubectl
+        owner: vagrant
+        group: vagrant
+        mode: "0644"
+
+    - name: Install K3S in server mode
+      ansible.builtin.shell: curl -sfL https://get.k3s.io | sh -
+      environment:
+        INSTALL_K3S_EXEC: "server --node-ip={{ server_ip }}"
+        K3S_KUBECONFIG_MODE: "644"
+      args:
+        creates: /etc/systemd/system/k3s.service
+
+    - name: Wait for K3s to be ready
+      ansible.builtin.command: kubectl get nodes
+      register: node_status
+      until: node_status.rc == 0 and 'Ready' in node_status.stdout
+      retries: 30
+      delay: 2
+      changed_when: false
+
+    - name: Apply manifests
+      ansible.builtin.command: kubectl apply -f /home/vagrant/manifests
+      register: apply_result
+      changed_when: "'configured' in apply_result.stdout or 'created' in apply_result.stdout"
+
+    - name: Add app domains to /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "192.168.56.110 app1.com app2.com app3.com"
+        state: present
+
+  handlers:
+    - name: Reload SSH
+      ansible.builtin.service:
+        name: ssh
+        state: reloaded
