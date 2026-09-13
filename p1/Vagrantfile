@@ -26,12 +26,14 @@ Vagrant.configure("2") do |config|
   config.vm.define "server" do |server|
     server.vm.hostname = "lle-coutS"
     server.vm.network "private_network", ip: SERVER_IP
-    server.vm.provision "shell", path: "scripts/server_init.sh"
   end
   # ────────────────── VM Worker ──────────────────
   config.vm.define "worker" do |worker|
     worker.vm.hostname = "lle-coutSW"
     worker.vm.network "private_network", ip: WORKER_IP
-    worker.vm.provision "shell", path: "scripts/worker_init.sh"
+    worker.vm.provision "ansible" do |ansible|
+      ansible.playbook = "scripts/playbook.yaml"
+      ansible.limit = "all"
+    end
   end
 end

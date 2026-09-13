@@ -2,6 +2,8 @@
 - name: Master provision
   hosts: all
   become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
 
   tasks:
     # ──────────── VSCode, Vagrant ────────────
@@ -33,7 +35,7 @@
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: true
-        cache_valid_time: 0
+        cache_valid_time: 3600
 
     - name: Install packages
       ansible.builtin.apt:
@@ -71,11 +73,6 @@
     - name: Install k9s
       ansible.builtin.apt:
         deb: /tmp/k9s.deb
-
-    - name: Remove k9s deb
-      ansible.builtin.file:
-        path: /tmp/k9s.deb
-        state: absent
 
     # ──────────── Vagrant, Libvirt & ZSH ────────────
 

@@ -26,6 +26,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "shell", inline: "ln -s /vagrant /home/vagrant/Inception-of-Things"
   config.vm.provision "ansible" do |ansible|
-      ansible.playbook = "confs/playbook.yaml"
+      ansible.playbook = "scripts/playbook.yaml"
+      ansible.compatibility_mode = "2.0"
   end
 end
