@@ -1,0 +1,90 @@
+---
+- name: "Provision P3"
+  hosts: localhost
+  connection: local
+  become: true
+
+  # ──────────────── Docker, k8s ────────────────
+
+  tasks:
+    - name: DL docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /usr/share/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add docker repo
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_facts['distribution_release'] }} stable"
+        filename: docker
+
+    - name: DL k8s GPG key
+      ansible.builtin.get_url:
+        url: "https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key"
+        dest: /usr/share/keyrings/kubernetes.asc
+        mode: "0644"
+
+    - name: Add k8s repo
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/kubernetes.asc] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /"
+        filename: kubernetes
+
+    - name: Install docker and kubectl
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+          - kubectl
+        state: present
+
+    - name: Start docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add user to docker group
+      ansible.builtin.user:
+        name: vagrant
+        groups: docker
+        append: true
+
+    # ──────────────── k3d ────────────────
+
+    - name: DL k3d script
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh
+        dest: /tmp/k3d_install.sh
+        mode: "0755"
+
+    - name: Install k3d
+      ansible.builtin.command:
+        cmd: /tmp/k3d_install.sh
+      args:
+        creates: /usr/local/bin/k3d
+
+    - name: Delete k3d install script
+      ansible.builtin.file:
+        path: /tmp/k3d_install.sh
+        state: absent
+
+    - name: Create k3d cluster
+      ansible.builtin.shell: |
+        k3d cluster list IoT || k3d cluster create IoT
+      register: k3d_result
+      changed_when: "'created successfully' in k3d_result.stdout"
+
+    # ──────────────── Config cluster  ────────────────
+
+    - name: Creates namespaces
+      ansible.builtin.shell: kubectl apply -f ../confs/namepasces.yaml
+      register: ns_out
+      changed_when: "'created' in ns_out.stdout"
+
+    # ──────────────── ArgoCD  ────────────────
+
+    - name: Install ArgoCD
+      ansible.builtin.shell: kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml

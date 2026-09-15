@@ -6,13 +6,15 @@
   vars:
     server_ip: "192.168.56.110"
 
+  # ──────────────── Basic config ────────────────
+
   tasks:
     - name: Update APT
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
 
-    - name: Install packets
+    - name: Install packages
       ansible.builtin.apt:
         name:
           - curl
@@ -41,6 +43,8 @@
         owner: vagrant
         group: vagrant
         mode: "0644"
+
+    # ──────────────── k3s + Manifests ────────────────
 
     - name: Install K3S in server mode
       ansible.builtin.shell: curl -sfL https://get.k3s.io | sh -

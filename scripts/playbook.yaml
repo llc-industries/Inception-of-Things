@@ -92,7 +92,9 @@
     - name: Create .zshrc
       ansible.builtin.copy:
         dest: "/home/vagrant/.zshrc"
-        content: "export PS1='%n@%m %~$ '\n"
+        content: |
+          export PS1='%n@%m %~$ '
+          alias k=kubectl
         owner: "vagrant"
         group: "vagrant"
         mode: "0644"
