@@ -77,10 +77,16 @@
       register: k3d_result
       changed_when: "'created successfully' in k3d_result.stdout"
 
+    - name: Share kubeconfig with vagrant
+      ansible.builtin.shell: |
+        mkdir -p /home/vagrant/.kube
+        cp /root/.kube/config /home/vagrant/.kube/config
+        chown -R vagrant:vagrant /home/vagrant/.kube
+
     # ──────────────── Config cluster  ────────────────
 
     - name: Creates namespaces
-      ansible.builtin.shell: kubectl apply -f ../confs/namepasces.yaml
+      ansible.builtin.shell: kubectl apply -f {{ playbook_dir }}/../confs/namespaces.yaml
       register: ns_out
       changed_when: "'created' in ns_out.stdout"
 
@@ -88,3 +94,12 @@
 
     - name: Install ArgoCD
       ansible.builtin.shell: kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+    - name: Wait for ArgoCD
+      ansible.builtin.shell: kubectl wait -n argocd --for=condition=available --timeout=600s deployment --all
+      changed_when: false
+
+    - name: Deploy app
+      ansible.builtin.shell: kubectl apply -f {{ playbook_dir }}/../confs/app.yaml
+      register: app_out
+      changed_when: "'created' in app_out.stdout or 'configured' in app_out.stdout"
