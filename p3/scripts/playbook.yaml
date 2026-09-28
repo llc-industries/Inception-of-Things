@@ -73,7 +73,7 @@
 
     - name: Create k3d cluster
       ansible.builtin.shell: |
-        k3d cluster list IoT || k3d cluster create IoT
+        k3d cluster list IoT || k3d cluster create IoT --port "80:80@loadbalancer"
       register: k3d_result
       changed_when: "'created successfully' in k3d_result.stdout"
 
@@ -95,6 +95,14 @@
     - name: Install ArgoCD
       ansible.builtin.shell: kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
+    - name: Apply ingress config
+      ansible.builtin.shell: kubectl apply -f {{ playbook_dir }}/../confs/ingress.yaml
+      register: ingress_out
+      changed_when: "'created' in ingress_out.stdout or 'configured' in ingress_out.stdout"
+
+    - name: Restart argo server for http config
+      ansible.builtin.shell: kubectl rollout restart deployment argocd-server -n argocd
+
     - name: Wait for ArgoCD
       ansible.builtin.shell: kubectl wait -n argocd --for=condition=available --timeout=600s deployment --all
       changed_when: false
@@ -103,3 +111,9 @@
       ansible.builtin.shell: kubectl apply -f {{ playbook_dir }}/../confs/app.yaml
       register: app_out
       changed_when: "'created' in app_out.stdout or 'configured' in app_out.stdout"
+
+    - name: Update /etc/hosts for argo and so_long
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1 argo.cd so.long"
+        state: present
